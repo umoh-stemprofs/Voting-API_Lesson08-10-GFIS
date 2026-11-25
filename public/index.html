@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Class Election</title>
+<style>
+body{font-family:system-ui,Arial,sans-serif;max-width:600px;margin:20px auto;padding:0 12px;background:#fff8f0}
+h1{color:#e65100}
+.card{background:#fff;border:2px solid #ffe0cc;border-radius:10px;padding:12px;margin:10px 0}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.bar{background:#ffe0cc;border-radius:6px;height:16px;margin-top:8px}
+.fill{background:#e65100;height:16px;border-radius:6px;transition:width .4s}
+button{background:#d84315;color:#fff;border:0;border-radius:6px;padding:8px 16px;font-size:16px;cursor:pointer}
+button:disabled{background:#bbb}
+#info{font-weight:700}
+small a{color:#888}
+</style>
+</head>
+<body>
+<h1>🗳️ Class Election</h1>
+<p id="info">Loading...</p>
+<div id="list"></div>
+<small><a href="#" onclick="localStorage.removeItem('voted');voted=null;load();return false">Let me vote again (testing only)</a></small>
+<script>
+// FRONT END: this page only shows data and does the maths. The back end (server.js) stores the votes.
+let voted = localStorage.getItem("voted");
+
+async function load() {
+  try {
+    const res = await fetch("/candidates");
+    const list = await res.json();
+    const total = list.reduce((sum, c) => sum + c.votes, 0);
+    const top = Math.max(...list.map(c => c.votes));
+    const leaders = list.filter(c => c.votes === top).map(c => c.name).join(", ");
+    document.getElementById("info").textContent =
+      "Total votes: " + total + (total > 0 ? " | Leading: " + leaders : "");
+    document.getElementById("list").innerHTML = list.map(c => {
+      const pct = total > 0 ? Math.round((c.votes / total) * 100) : 0;
+      return `<div class="card">
+        <div class="row"><b>${c.name}</b><span>${c.votes} votes (${pct}%)</span>
+        <button ${voted ? "disabled" : ""} onclick="vote('${c.name}')">Vote</button></div>
+        <div class="bar"><div class="fill" style="width:${pct}%"></div></div></div>`;
+    }).join("");
+  } catch (e) {
+    document.getElementById("info").textContent = "Cannot reach the server. Is it running?";
+  }
+}
+
+async function vote(name) {
+  const res = await fetch("/vote", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name })
+  });
+  if (!res.ok) { alert("Vote failed. Candidate not found."); return; }
+  voted = "yes";
+  localStorage.setItem("voted", "yes");
+  load();
+}
+
+load();
+setInterval(load, 2000);
+</script>
+</body>
+</html>

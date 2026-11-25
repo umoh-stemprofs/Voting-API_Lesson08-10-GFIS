@@ -1,0 +1,8 @@
+node_modules/
+server.log
+server.pid
+.env
+.vs/
+
+# Unrelated local file-sharing toy + VS caches, not part of the voting app
+share/
